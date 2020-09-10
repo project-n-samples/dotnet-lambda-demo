@@ -1,0 +1,35 @@
+﻿<Properties StartupConfiguration="{D68DBC98-FFD0-4CB9-A189-8B13C390EBCF}|Default">
+  <MonoDevelop.Ide.Workbench ActiveDocument="src/MPLambdaPOC/Function.cs">
+    <Files>
+      <File FileName="src/MPLambdaPOC/Function.cs" Line="38" Column="2" />
+      <File FileName="test/MPLambdaPOC.Tests/FunctionTest.cs" />
+      <File FileName="src/MPLambdaPOC/Makefile" />
+    </Files>
+    <Pads>
+      <Pad Id="ProjectPad">
+        <State name="__root__">
+          <Node name="MPLambdaPOC" expanded="True">
+            <Node name="MPLambdaPOC" expanded="True">
+              <Node name="Dependencies" expanded="True">
+                <Node name="PackageDependencies" expanded="True" selected="True" />
+              </Node>
+            </Node>
+            <Node name="MPLambdaPOC.Tests" expanded="True" />
+          </Node>
+        </State>
+      </Pad>
+      <Pad Id="MonoDevelop.UnitTesting.TestPad">
+        <State name="__root__">
+          <Node name="MPLambdaPOC" expanded="True" selected="True" />
+        </State>
+      </Pad>
+    </Pads>
+  </MonoDevelop.Ide.Workbench>
+  <MonoDevelop.Ide.ItemProperties.MPLambdaPOC.Tests PreferredExecutionTarget="MonoDevelop.Default" />
+  <MonoDevelop.Ide.DebuggingService.PinnedWatches />
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
+  <MonoDevelop.Ide.DebuggingService.Breakpoints>
+    <BreakpointStore />
+  </MonoDevelop.Ide.DebuggingService.Breakpoints>
+  <MultiItemStartupConfigurations />
+</Properties>

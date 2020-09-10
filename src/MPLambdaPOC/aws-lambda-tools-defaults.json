@@ -1,0 +1,14 @@
+{
+  "Information": [
+    "To learn more about the Lambda commands with the .NET Core CLI execute the following command at the command line in the project root directory.",
+    "dotnet lambda help"
+  ],
+  "profile": "default",
+  "region": "us-west-2",
+  "configuration": "Release",
+  "framework": "netcoreapp3.1",
+  "function-runtime": "dotnetcore3.1",
+  "function-memory-size": 256,
+  "function-timeout": 30,
+  "function-handler": "MPLambdaPOC::MPLambdaPOC.Function::ListBucket"
+}
