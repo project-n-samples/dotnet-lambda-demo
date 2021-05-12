@@ -1,6 +1,6 @@
 # AWS Lambda Function in .NET for Bolt
 
-Sample AWS Lambda Applications in .NET that utilizes [.NET SDK for Bolt](https://gitlab.com/projectn-oss/bolt-sdk-net)
+Sample AWS Lambda Function in .NET that utilizes [.NET SDK for Bolt](https://gitlab.com/projectn-oss/bolt-sdk-net)
 
 ### Requirements
 
@@ -46,16 +46,18 @@ make link
 
 ### Usage
 
-The Sample AWS Lambda application in .NET illustrates the usage and various operations, via separate handlers,
-that can be performed using [.NET SDK for Bolt](https://gitlab.com/projectn-oss/bolt-sdk-net). It can be tested from
-the AWS Management Console by creating a test event and specifying its inputs in JSON format.
+The Sample AWS Lambda Function in .NET illustrates the usage and various operations, via separate handlers,
+that can be performed using [.NET SDK for Bolt](https://gitlab.com/projectn-oss/bolt-sdk-net).
+The deployed AWS lambda function can be tested from the AWS Management Console by creating a test event and
+specifying its inputs in JSON format.
 
-Please ensure that `Bolt` is deployed before testing the sample AWS lambda application.
+Please ensure that `Bolt` is deployed before testing the sample AWS lambda function. If you haven't deployed `Bolt`,
+follow the instructions given [here](https://xyz.projectn.co/installation-guide#estimate-savings) to deploy `Bolt`.
 
-#### Testing Bolt / S3 Operations
+#### Testing Bolt or S3 Operations
 
-`BoltS3OpsHandler` is the handler that enables the user to perform Bolt / S3 operations.
-It sends a Bucket / Object request to Bolt / S3 and returns an appropriate response based on the parameters
+`BoltS3OpsHandler` is the handler that enables the user to perform Bolt or S3 operations.
+It sends a Bucket / Object request to Bolt or S3 and returns an appropriate response based on the parameters
 passed in as input.
 
 * BoltS3OpsHandler is the handler that is invoked by AWS Lambda to process an incoming event. To use this handler,
@@ -138,5 +140,5 @@ If the object is gzip encoded, object is decompressed before computing its MD5.
 
 ### Getting Help
 
-For any additional assistance, please refer to [ProjectN Docs](https://xyz.projectn.co/) or contact us directly
+For additional assistance, please refer to [Project N Docs](https://xyz.projectn.co/) or contact us directly
 [here](mailto:support@projectn.co)
