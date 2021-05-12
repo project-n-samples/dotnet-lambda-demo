@@ -57,7 +57,7 @@ follow the instructions given [here](https://xyz.projectn.co/installation-guide#
 #### Testing Bolt or S3 Operations
 
 `BoltS3OpsHandler` is the handler that enables the user to perform Bolt or S3 operations.
-It sends a Bucket / Object request to Bolt or S3 and returns an appropriate response based on the parameters
+It sends a Bucket or Object request to Bolt or S3 and returns an appropriate response based on the parameters
 passed in as input.
 
 * BoltS3OpsHandler is the handler that is invoked by AWS Lambda to process an incoming event. To use this handler,
