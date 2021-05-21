@@ -7,6 +7,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using ProjectN.Bolt;
 using System.Text;
+using System.IO;
 
 namespace MPLambdaPOC
 {
@@ -18,6 +19,10 @@ namespace MPLambdaPOC
             LIST_OBJECTS_V2,
             PUT_OBJECT,
             DELETE_OBJECT,
+            GET_OBJECT,
+            GET_OBJECT_TTFB,
+            GET_OBJECT_PASSTHROUGH,
+            GET_OBJECT_PASSTHROUGH_TTFB,
             ALL
         }
 
@@ -26,6 +31,7 @@ namespace MPLambdaPOC
 
         private int numKeys;
         private int objLength;
+        RequestType requestType;
 
         // list of keys for Put , Delete Object tests.
         private List<string> keys;
@@ -41,7 +47,7 @@ namespace MPLambdaPOC
 
             // If requestType is not passed, perform all perf tests.
             input.TryGetValue("requestType", out string requestTypeStr);
-            RequestType requestType = string.IsNullOrEmpty(requestTypeStr) ? RequestType.ALL :
+            requestType = string.IsNullOrEmpty(requestTypeStr) ? RequestType.ALL :
                 (RequestType)Enum.Parse(typeof(RequestType), requestTypeStr.ToUpper());
 
 
@@ -56,11 +62,19 @@ namespace MPLambdaPOC
             input.TryGetValue("objLength", out string objLengthStr);
             objLength = string.IsNullOrEmpty(objLengthStr) ? 100 : Int32.Parse(objLengthStr);
 
-            // If PUT / DELETE Object, generate key names.
-            // If Get Object (including passthrough) list objects (up to numKeys) to get key names
-            if (requestType == RequestType.PUT_OBJECT || requestType == RequestType.DELETE_OBJECT)
+            // If PUT, DELETE, ALL Object, generate key names.
+            // If Get Object (including passthrough), list objects (up to numKeys) to get key names
+            if (requestType == RequestType.PUT_OBJECT ||
+                requestType == RequestType.DELETE_OBJECT ||
+                requestType == RequestType.ALL)
             {
                 keys = GenerateKeyNames(numKeys);
+            } else if (requestType == RequestType.GET_OBJECT ||
+                requestType == RequestType.GET_OBJECT_PASSTHROUGH ||
+                requestType == RequestType.GET_OBJECT_TTFB ||
+                requestType == RequestType.GET_OBJECT_PASSTHROUGH_TTFB)
+            {
+                keys = ListObjectsV2(input["bucket"]);
             }
 
             Dictionary<string, Dictionary<string, Dictionary<string, string>>> respDict;
@@ -76,6 +90,21 @@ namespace MPLambdaPOC
                         break;
                     case RequestType.DELETE_OBJECT:
                         respDict = DeleteObjectPerf(input["bucket"]);
+                        break;
+                    case RequestType.GET_OBJECT:
+                        respDict = GetObjectPerf(input["bucket"]);
+                        break;
+                    case RequestType.GET_OBJECT_TTFB:
+                        respDict = GetObjectPerf(input["bucket"]);
+                        break;
+                    case RequestType.GET_OBJECT_PASSTHROUGH:
+                        respDict = GetObjectPassthroughPerf(input["bucket"]);
+                        break;
+                    case RequestType.GET_OBJECT_PASSTHROUGH_TTFB:
+                        respDict = GetObjectPassthroughPerf(input["bucket"]);
+                        break;
+                    case RequestType.ALL:
+                        respDict = AllPerf(input["bucket"]);
                         break;
                     default:
                         respDict = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>();
@@ -279,6 +308,294 @@ namespace MPLambdaPOC
             };
         }
 
+        private Dictionary<string, Dictionary<string, Dictionary<string, string>>> GetObjectPerf(string bucket)
+        {
+            List<long> s3GetObjTimes = new List<long>();
+            List<long> boltGetObjTimes = new List<long>();
+
+            List<long> s3ObjSizes = new List<long>();
+            List<long> boltObjSizes = new List<long>();
+
+            int s3CmpObjCount = 0;
+            int s3UncmpObjCount = 0;
+            int boltCmpObjCount = 0;
+            int boltUncmpObjCount = 0;
+
+            Stopwatch stopwatch = new Stopwatch();
+
+            // Get Objects from S3.
+            foreach (string key in keys)
+            {
+                var getObjectRequest = new GetObjectRequest
+                {
+                    BucketName = bucket,
+                    Key = key
+                };
+
+                stopwatch.Restart();
+                var getObjectTask = s3Client.GetObjectAsync(getObjectRequest);
+
+                using GetObjectResponse response = getObjectTask.Result;
+                using Stream responseStream = response.ResponseStream;
+                using StreamReader reader = new StreamReader(responseStream);
+
+                // If getting first byte object latency, read at most 1 byte,
+                // otherwise read the entire body.
+                if (requestType == RequestType.GET_OBJECT_TTFB)
+                {
+                    // read only first byte from the stream.
+                    reader.Read();
+                }
+                else
+                {
+                    // read all the data from the stream.
+                    char[] readBuffer = new char[4096];
+                    while (reader.Read(readBuffer, 0, readBuffer.Length) > 0) ;
+                }
+                stopwatch.Stop();
+
+                // calc latency
+                long getObjTime = stopwatch.ElapsedMilliseconds;
+                s3GetObjTimes.Add(getObjTime);
+
+                // count object
+                string encoding = response.Headers.ContentEncoding;
+                if ((!string.IsNullOrEmpty(encoding) &&
+                    encoding.Equals("gzip", StringComparison.OrdinalIgnoreCase))
+                    || key.EndsWith(".gz"))
+                {
+                    s3CmpObjCount++;
+                }
+                else
+                {
+                    s3UncmpObjCount++;
+                }
+
+                // get object size.
+                s3ObjSizes.Add(response.ContentLength);
+            }
+
+            // Get Objects from Bolt.
+            foreach (string key in keys)
+            {
+                var getObjectRequest = new GetObjectRequest
+                {
+                    BucketName = bucket,
+                    Key = key
+                };
+
+                stopwatch.Restart();
+                var getObjectTask = boltS3Client.GetObjectAsync(getObjectRequest);
+
+                using GetObjectResponse response = getObjectTask.Result;
+                using Stream responseStream = response.ResponseStream;
+                using StreamReader reader = new StreamReader(responseStream);
+
+                // If getting first byte object latency, read at most 1 byte,
+                // otherwise read the entire body.
+                if (requestType == RequestType.GET_OBJECT_TTFB)
+                {
+                    // read only first byte from the stream.
+                    reader.Read();
+                }
+                else
+                {
+                    // read all the data from the stream.
+                    char[] readBuffer = new char[4096];
+                    while (reader.Read(readBuffer, 0, readBuffer.Length) > 0) ;
+                }
+                stopwatch.Stop();
+
+                // calc latency
+                long getObjTime = stopwatch.ElapsedMilliseconds;
+                boltGetObjTimes.Add(getObjTime);
+
+                // count object
+                string encoding = response.Headers.ContentEncoding;
+                if ((!string.IsNullOrEmpty(encoding) &&
+                    encoding.Equals("gzip", StringComparison.OrdinalIgnoreCase))
+                    || key.EndsWith(".gz"))
+                {
+                    boltCmpObjCount++;
+                }
+                else
+                {
+                    boltUncmpObjCount++;
+                }
+
+                // get object size.
+                boltObjSizes.Add(response.ContentLength);
+            }
+
+            // calc s3 perf stats.
+            var s3GetObjPerfStats = ComputePerfStats(s3GetObjTimes, objSizes: s3ObjSizes);
+
+            // calc bolt perf stats.
+            var boltGetObjPerfStats = ComputePerfStats(boltGetObjTimes, objSizes: boltObjSizes);
+
+            string s3GetObjStatName, boltGetObjStatName;
+            if (requestType == RequestType.GET_OBJECT_TTFB)
+            {
+                s3GetObjStatName = "s3_get_obj_ttfb_perf_stats";
+                boltGetObjStatName = "bolt_get_obj_ttfb_perf_stats";
+            }
+            else
+            {
+                s3GetObjStatName = "s3_get_obj_perf_stats";
+                boltGetObjStatName = "bolt_get_obj_perf_stats";
+            }
+
+            Dictionary<string, string> s3Count = new Dictionary<string, string>()
+            {
+                {"compressed", s3CmpObjCount.ToString()},
+                {"uncompressed", s3UncmpObjCount.ToString()}
+            };
+
+            Dictionary<string, string> boltCount = new Dictionary<string, string>()
+            {
+                {"compressed", boltCmpObjCount.ToString()},
+                {"uncompressed", boltUncmpObjCount.ToString()}
+            };
+
+            var objCount = new Dictionary<string, Dictionary<string, string>>()
+            {
+                {"s3Count", s3Count},
+                {"boltCount", boltCount}
+            };
+
+            return new Dictionary<string, Dictionary<string, Dictionary<string, string>>>()
+            {
+                {s3GetObjStatName, s3GetObjPerfStats},
+                {boltGetObjStatName, boltGetObjPerfStats},
+                {"object_count", objCount}
+            };
+        }
+        
+        private Dictionary<string, Dictionary<string, Dictionary<string, string>>> GetObjectPassthroughPerf(string bucket)
+        {
+            List<long> boltGetObjTimes = new List<long>();
+
+            List<long> boltObjSizes = new List<long>();
+
+            int boltCmpObjCount = 0;
+            int boltUncmpObjCount = 0;
+
+            Stopwatch stopwatch = new Stopwatch();
+
+            // Get objects via passthrough from Bolt.
+            // Get Objects from Bolt.
+            foreach (string key in keys)
+            {
+                var getObjectRequest = new GetObjectRequest
+                {
+                    BucketName = bucket,
+                    Key = key
+                };
+
+                stopwatch.Restart();
+                var getObjectTask = boltS3Client.GetObjectAsync(getObjectRequest);
+
+                using GetObjectResponse response = getObjectTask.Result;
+                using Stream responseStream = response.ResponseStream;
+                using StreamReader reader = new StreamReader(responseStream);
+
+                // If getting first byte object latency, read at most 1 byte,
+                // otherwise read the entire body.
+                if (requestType == RequestType.GET_OBJECT_PASSTHROUGH_TTFB)
+                {
+                    // read only first byte from the stream.
+                    reader.Read();
+                }
+                else
+                {
+                    // read all the data from the stream.
+                    char[] readBuffer = new char[4096];
+                    while (reader.Read(readBuffer, 0, readBuffer.Length) > 0) ;
+                }
+                stopwatch.Stop();
+
+                // calc latency
+                long getObjTime = stopwatch.ElapsedMilliseconds;
+                boltGetObjTimes.Add(getObjTime);
+
+                // count object
+                string encoding = response.Headers.ContentEncoding;
+                if ((!string.IsNullOrEmpty(encoding) &&
+                    encoding.Equals("gzip", StringComparison.OrdinalIgnoreCase))
+                    || key.EndsWith(".gz"))
+                {
+                    boltCmpObjCount++;
+                }
+                else
+                {
+                    boltUncmpObjCount++;
+                }
+
+                // get object size.
+                boltObjSizes.Add(response.ContentLength);
+            }
+
+            // calc bolt perf stats.
+            var boltGetObjPtPerfStats = ComputePerfStats(boltGetObjTimes, objSizes: boltObjSizes);
+
+            string boltGetObjPtStatName;
+            if (requestType == RequestType.GET_OBJECT_PASSTHROUGH_TTFB)
+            {
+                boltGetObjPtStatName = "bolt_get_obj_pt_ttfb_perf_stats";
+            }
+            else
+            {
+                boltGetObjPtStatName = "bolt_get_obj_pt_perf_stats";
+            }
+
+            Dictionary<string, string> boltCount = new Dictionary<string, string>()
+            {
+                {"compressed", boltCmpObjCount.ToString()},
+                {"uncompressed", boltUncmpObjCount.ToString()}
+            };
+
+            var objCount = new Dictionary<string, Dictionary<string, string>>()
+            {
+                {"boltCount", boltCount}
+            };
+
+            return new Dictionary<string, Dictionary<string, Dictionary<string, string>>>()
+            {
+                {boltGetObjPtStatName, boltGetObjPtPerfStats},
+                {"object_count", objCount}
+            };
+        }
+        
+        private Dictionary<string, Dictionary<string, Dictionary<string, string>>> AllPerf(string bucket)
+        {
+            // Put, Delete Object perf tests using generated key names.
+            var putObjPerfStats = PutObjectPerf(bucket);
+            var delObjPerfStats = DeleteObjectPerf(bucket);
+
+            // List Objects perf tests on existing objects.
+            var listObjsPerfStats = ListObjectsV2Perf(bucket);
+
+            // Get the list of objects before get object perf test.
+            keys = ListObjectsV2(bucket);
+            var getObjPerfStats = GetObjectPerf(bucket);
+
+            return MergePerfStats(putObjPerfStats, delObjPerfStats, listObjsPerfStats, getObjPerfStats);
+        }
+
+        private Dictionary<string, Dictionary<string, Dictionary<string, string>>> MergePerfStats(
+            params Dictionary<string, Dictionary<string, Dictionary<string, string>>>[] perfStats)
+        {
+            var mergedPerfStats = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>();
+            foreach (var perfStat in perfStats)
+            {
+                foreach(var stat in perfStat)
+                {
+                    mergedPerfStats.Add(stat.Key, stat.Value);
+                }
+            }
+            return mergedPerfStats;
+        }
+
         private string Generate(int objLength = 10)
         {
             const string src = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -307,10 +624,30 @@ namespace MPLambdaPOC
             return keys;
         }
 
+        private List<string> ListObjectsV2(string bucket)
+        {
+            List<string> keys = new List<string>();
+
+            ListObjectsV2Request listObjectsV2Request = new ListObjectsV2Request
+            {
+                BucketName = bucket,
+                MaxKeys = numKeys
+            };
+
+            var listObjectsV2Task = s3Client.ListObjectsV2Async(listObjectsV2Request);
+            var response = listObjectsV2Task.Result;
+
+            foreach (S3Object entry in response.S3Objects)
+            {
+                keys.Add(entry.Key);
+            }
+            return keys;
+        }
+
         public Dictionary<string, Dictionary<string, string>> ComputePerfStats(
             List<long> opTimes,
             List<double> opTp = null,
-            List<int> objSizes = null)
+            List<long> objSizes = null)
         {
             // calc op latency perf.
             double opAvgTime = opTimes.Average();
