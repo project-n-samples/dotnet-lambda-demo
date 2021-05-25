@@ -11,9 +11,14 @@ using System.IO;
 
 namespace MPLambdaPOC
 {
+    /// <summary>
+    /// BoltS3Perf processes AWS Lambda events that are received by the handler function
+    /// BoltS3OpsHandler.HandleRequest for Bolt / S3 Performance testing.
+    /// </summary>
     public class BoltS3Perf
     {
 
+        // request types supported
         enum RequestType
         {
             LIST_OBJECTS_V2,
@@ -26,14 +31,18 @@ namespace MPLambdaPOC
             ALL
         }
 
+        // Bolt and S3 Clients.
         private AmazonS3Client s3Client;
         private AmazonS3Client boltS3Client;
 
+        // max. number of keys to be used in Perf.
         private int numKeys;
+        // length of object data.
         private int objLength;
+        // type of perf to be performed.
         RequestType requestType;
 
-        // list of keys for Put , Delete Object tests.
+        // list of keys for Perf tests.
         private List<string> keys;
 
         public BoltS3Perf()
@@ -42,6 +51,12 @@ namespace MPLambdaPOC
             boltS3Client = new BoltS3Client();
         }
 
+        /// <summary>
+        /// process_event extracts the parameters (requestType, bucket) from the event, uses those
+        /// parameters to run performance testing against Bolt / S3 and returns back performance statistics.
+        /// </summary>
+        /// <param name="input">incoming lambda event</param>
+        /// <returns>performance statistics</returns>
         public Dictionary<string, Dictionary<string, Dictionary<string, string>>> ProcessEvent(Dictionary<string, string> input)
         {
 
@@ -139,6 +154,12 @@ namespace MPLambdaPOC
             return respDict;
         }
 
+        /// <summary>
+        /// Measures the List Objects V2 performance (latency, throughput) of Bolt / S3.
+        /// </summary>
+        /// <param name="bucket">bucket name</param>
+        /// <param name="numIter">num of iterations</param>
+        /// <returns>List Objects V2 performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> ListObjectsV2Perf(string bucket, int numIter = 10)
         {
             List<long> s3ListObjTimes = new List<long>();
@@ -205,6 +226,11 @@ namespace MPLambdaPOC
             };
         }
 
+        /// <summary>
+        /// Measures the Put Object performance (latency, throughput) of Bolt / S3.
+        /// </summary>
+        /// <param name="bucket"> bucket name</param>
+        /// <returns>Put object performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> PutObjectPerf(string bucket)
         {
             List<long> s3PutObjTimes = new List<long>();
@@ -258,6 +284,11 @@ namespace MPLambdaPOC
             };
         }
 
+        /// <summary>
+        /// Measures the Delete Object performance (latency, throughput) of Bolt/S3.
+        /// </summary>
+        /// <param name="bucket"> bucket name</param>
+        /// <returns>Delete Object performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> DeleteObjectPerf(string bucket)
         {
             List<long> s3DelObjTimes = new List<long>();
@@ -308,6 +339,11 @@ namespace MPLambdaPOC
             };
         }
 
+        /// <summary>
+        /// Measures the Get Object performance (latency, throughput) of Bolt / S3.
+        /// </summary>
+        /// <param name="bucket">bucket name</param>
+        /// <returns>Get Object performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> GetObjectPerf(string bucket)
         {
             List<long> s3GetObjTimes = new List<long>();
@@ -470,7 +506,12 @@ namespace MPLambdaPOC
                 {"object_count", objCount}
             };
         }
-        
+
+        /// <summary>
+        /// Measures the Get Object passthrough performance (latency, throughput) of Bolt / S3.
+        /// </summary>
+        /// <param name="bucket">name of unmonitored bucket</param>
+        /// <returns>Get Object passthrough performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> GetObjectPassthroughPerf(string bucket)
         {
             List<long> boltGetObjTimes = new List<long>();
@@ -565,7 +606,12 @@ namespace MPLambdaPOC
                 {"object_count", objCount}
             };
         }
-        
+
+        /// <summary>
+        /// Measures PUT,GET,DELETE,List Objects performance (latency, throughput) of Bolt / S3.
+        /// </summary>
+        /// <param name="bucket">bucket name</param>
+        /// <returns>Object performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> AllPerf(string bucket)
         {
             // Put, Delete Object perf tests using generated key names.
@@ -582,6 +628,11 @@ namespace MPLambdaPOC
             return MergePerfStats(putObjPerfStats, delObjPerfStats, listObjsPerfStats, getObjPerfStats);
         }
 
+        /// <summary>
+        /// Merge one or more dictionaries containing performance statistics into one dictionary.
+        /// </summary>
+        /// <param name="perfStats">one or more performance statistics</param>
+        /// <returns>merged performance statistics</returns>
         private Dictionary<string, Dictionary<string, Dictionary<string, string>>> MergePerfStats(
             params Dictionary<string, Dictionary<string, Dictionary<string, string>>>[] perfStats)
         {
@@ -596,6 +647,11 @@ namespace MPLambdaPOC
             return mergedPerfStats;
         }
 
+        /// <summary>
+        /// Generate a random string of certain length
+        /// </summary>
+        /// <param name="objLength">length of the string.</param>
+        /// <returns>generated string</returns>
         private string Generate(int objLength = 10)
         {
             const string src = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -610,6 +666,11 @@ namespace MPLambdaPOC
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Generate Object names to be used in PUT/DELETE Object operations.
+        /// </summary>
+        /// <param name="numObjects">number of objects</param>
+        /// <returns>list of object names</returns>
         private List<string> GenerateKeyNames(int numObjects)
         {
             List<string> keys = new List<string>();
@@ -624,6 +685,11 @@ namespace MPLambdaPOC
             return keys;
         }
 
+        /// <summary>
+        /// Returns a list of `numKeys` objects from the given bucket in Bolt/S3
+        /// </summary>
+        /// <param name="bucket">bucket name</param>
+        /// <returns>list of objects</returns>
         private List<string> ListObjectsV2(string bucket)
         {
             List<string> keys = new List<string>();
@@ -644,6 +710,13 @@ namespace MPLambdaPOC
             return keys;
         }
 
+        /// <summary>
+        /// Compute performance statistics
+        /// </summary>
+        /// <param name="opTimes">list of latencies</param>
+        /// <param name="opTp">list of throughputs</param>
+        /// <param name="objSizes">list of object sizes</param>
+        /// <returns>performance statistics (latency, throughput, object size)</returns>
         public Dictionary<string, Dictionary<string, string>> ComputePerfStats(
             List<long> opTimes,
             List<double> opTp = null,
