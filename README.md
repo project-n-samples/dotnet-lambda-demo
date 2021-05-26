@@ -54,9 +54,9 @@ specifying its inputs in JSON format.
 Please ensure that `Bolt` is deployed before testing the sample AWS lambda function. If you haven't deployed `Bolt`,
 follow the instructions given [here](https://xyz.projectn.co/installation-guide#estimate-savings) to deploy `Bolt`.
 
-#### Testing Bolt or S3 Operations
+#### Testing S3 API Operations with Bolt and S3
 
-`BoltS3OpsHandler` is the handler that enables the user to perform Bolt or S3 operations.
+`BoltS3OpsHandler` is the handler that enables the user to test S3 API operations with Bolt and S3.
 It sends a Bucket or Object request to Bolt or S3 and returns an appropriate response based on the parameters
 passed in as input.
 
