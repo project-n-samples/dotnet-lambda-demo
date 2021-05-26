@@ -199,6 +199,32 @@ are run using the first 1000 objects in the bucket and `Put Object` tests are ru
       {"requestType": "all", "bucket": "<bucket>"}
       ```
 
+#### Auto Heal Tests
+
+`BoltAutoHealHandler` is the handler that enables the user to run auto heal tests. Before running this handler,
+modify `data-cruncher` to use `standard` tier-class and set `backupduration` and `recoveryscannerperiod` to `1 minute`
+to ensure that the auto-healing duration is within the lambda execution timeout interval. Crunch a sample bucket having
+a single object. Then delete the single fragment object from the `n-data`bucket. Now run this handler, passing the name
+of the crunched bucket along with the single object as input parameters to the handler. The handler attempts to
+retrieve object repeatedly until it succeeds, which would indicate successful auto-healing of the object and returns
+the time taken to do so.
+
+* BoltAutoHealHandler is a handler function that is invoked by AWS Lambda to process an incoming event
+  for performing Auto-Heal testing.  To use this handler, change the handler of the Lambda function to
+  `MPLambdaPOC::MPLambdaPOC.BoltAutoHealHandler::HandleRequest`.
+  
+* BoltAutoHealHandler accepts the following input parameters as part of the event:
+  * bucket - bucket name
+  
+  * key - key name
+    
+
+* Following is an example of an event that can be used to invoke the handler.
+    * Measure Auto-Heal time of an object in Bolt.
+      ```json
+      {"bucket": "<bucket>", "key": "<key>"}
+      ```
+
 ### Getting Help
 
 For additional assistance, please refer to [Project N Docs](https://xyz.projectn.co/) or contact us directly
