@@ -9,15 +9,13 @@ Sample AWS Lambda Function in .NET that utilizes [.NET SDK for Bolt](https://git
 
 ### Build From Source
 
-* Build the `bolt-sdk-net` package for `Bolt` by following instructions given [here](https://gitlab.com/projectn-oss/bolt-sdk-net)
-
-* Download the source and link `bolt-sdk-net`:
+* Download the source and install the `.NET SDK for Bolt` using dotnet CLI:
 ```bash
 git clone https://gitlab.com/projectn-oss/dotnet-lambda-demo.git
 
 cd dotnet-lambda-demo/src/MPLambdaPOC
 
-make link
+dotnet add package ProjectN.Bolt --version 1.0.0
 ```
 
 ### Deploy
