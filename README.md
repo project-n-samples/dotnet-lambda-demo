@@ -15,7 +15,7 @@ git clone https://gitlab.com/projectn-oss/dotnet-lambda-demo.git
 
 cd dotnet-lambda-demo/src/MPLambdaPOC
 
-dotnet add package ProjectN.Bolt --version 1.0.0
+dotnet add package ProjectN.Bolt --version 1.0.1
 ```
 
 ### Deploy
